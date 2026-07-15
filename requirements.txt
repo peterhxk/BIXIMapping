@@ -1,3 +1,11 @@
 geopandas
 osmnx
 matplotlib
+networkx
+pandas
+numpy
+folium
+shapely
+requests
+Pillow
+ipython
