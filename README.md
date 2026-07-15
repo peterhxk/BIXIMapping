@@ -1,9 +1,9 @@
 # BIXI Montreal — Network Flow & Routing Analysis
 
-Routing Montreal's real 2025–2026 [BIXI](https://bixi.com/) bike-share trips over the actual
-street network to see **where riders go**, not just where they start and stop. Every trip is a
+Routing Montreal's real 2025–2026 [BIXI](https://donnees.montreal.ca/en/dataset/bixi-historique-des-deplacements?) bike-share trips over the actual
+street network to estimate **riders' traffic flow**, along with sources and destinations. Every trip is a
 station-to-station record; this project turns tens of thousands of unique origin–destination pairs
-into shortest paths across the Montreal bike + walk graph, accumulates the load on every street
+into shortest paths across the Montreal bike + walk graph, which accumulates the load on every street
 segment, and breaks it down by hour, by day, and by station.
 
 ![Montreal edge-load heatmap](output/montreal_heatmap.png)
@@ -40,7 +40,7 @@ show a commute-driven double peak (8am / 5pm); weekends show a broader midday pe
 ![Weekday vs weekend hourly pattern](output/montreal_weekday_weekend.png)
 
 ### Station net-flow (rebalancing signal)
-Arrivals minus departures per station — which stations are net *sinks* (fill up, need bikes
+Arrivals minus departures per station: which stations are net *sinks* (fill up, need bikes
 removed) versus net *sources* (drain out, need bikes added).
 
 ![Station net-flow map](output/montreal_station_netflow.png)
@@ -55,8 +55,7 @@ All rendered figures land in [`output/`](output/).
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt          # geopandas, osmnx, matplotlib
-pip install folium networkx pandas numpy # also used by the notebooks
+pip install -r requirements.txt     
 ```
 
 Then open any notebook with Jupyter and run top to bottom.
@@ -71,20 +70,16 @@ DonneesOuvertes2025_010203040506070809101112.csv          # 2025 trips (full sea
 DonneesOuvertes2026_01020304.csv                          # 2026 trips (Jan–Apr)
 ```
 
-Paths are set at the top of each notebook (`DATA_PATH`, `CSV_2025`, `CSV_2026`) and currently point
-at `/Volumes/Extreme SSD/SUMO Data/` — edit them to match where you keep the data. Trip CSVs come
-from [BIXI open data](https://bixi.com/en/open-data/); weather is fetched from the free
-[Open-Meteo historical archive API](https://open-meteo.com/en/docs/historical-weather-api).
+Paths are set at the top of each notebook (`DATA_PATH`, `CSV_2025`, `CSV_2026`) and currently point at `/Volumes/Extreme SSD/SUMO Data/`; edit them to match where you keep the data. Trip CSVs come from [Montreal's BIXI open data](https://donnees.montreal.ca/en/dataset/bixi-historique-des-deplacements?); weather is fetched from the free [Open-Meteo historical archive API](https://open-meteo.com/en/docs/historical-weather-api).
 
-OSMnx graph downloads and the composed bike+walk graph are cached under `cache/` (gitignored), so
-the slow graph-build steps run only once.
+OSMnx graph downloads and the composed bike+walk graph are cached under `cache/` (gitignored), so the slow graph-build steps run only once.
 
 ## Notes
 
-- Routes on a **composed bike + walk graph** (`nx.compose`), because cyclists share key links —
-  notably the Jacques-Cartier bridge — with pedestrians, and a bike-only network silently drops
+- Routes on a **composed bike + walk graph** (`nx.compose`), because cyclists share key links,
+  notably the Jacques-Cartier bridge bike lane, with pedestrians, and a bike-only network silently drops
   them.
-- The benchmark restricts to the largest strongly connected component so every sampled query is
+- The benchmark restricts to the largest strongly connected component, so every sampled query is
   guaranteed routable; the production pipeline routes the full composed graph and skips
   `NetworkXNoPath` pairs.
 - `montreal_edge_loads.pkl` is the cached per-edge / per-hour load; the visualization cells can be
