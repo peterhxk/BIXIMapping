@@ -1,0 +1,105 @@
+{
+  "_description": "L'International des Feux Loto-Quebec (IFLQ) fireworks calendars, La Ronde / Ile Sainte-Helene, Montreal. Single source of truth for firework_anomaly.ipynb and predict_fireworks.py. All shells burst over the St. Lawrence just off the island.",
+  "_schema": {
+    "date": "YYYY-MM-DD local date of the show",
+    "time": "HH:MM local launch time (24h). The escape-window logic assumes 22:00; verified only for 2025, standard/assumed for other years.",
+    "program": "country / theme, or null if not sourced",
+    "pyro_firm": "competing pyrotechnics company, or null if not sourced"
+  },
+  "_notes": [
+    "Weekday is intentionally NOT stored -- derive it from `date` downstream (pandas dt.day_name()).",
+    "The weekday mix varies a lot by year: 2022 ran Wed/Sat, 2023 Thu (+1 Sun), 2024 Thu/Sun/Sat, 2025 Thu/Sun. This cross-year weekday diversity is valuable -- it lets the model prove it reads the demand SHAPE, not just 'is it a Thursday'.",
+    "Show COUNT varies: 2022 had 9 shows, 2023/2024/2025 had 8 each.",
+    "Launch time is 22:00 for every listed show (festival standard, explicitly confirmed for 2025). If any older show ran at a different time, correct it here -- the escape window depends on it."
+  ],
+  "timezone": "America/Montreal",
+  "venue": {"name": "La Ronde, Ile Sainte-Helene", "launch_lat": 45.5222, "launch_lon": -73.5320},
+  "seasons": {
+    "2022": {
+      "confirmed": true,
+      "confidence": "high",
+      "edition": 36,
+      "source": "Official PJCCI (Les Ponts Jacques-Cartier et Champlain) press release, 36th edition. England's Aug 3 slot cross-checks with Wikipedia's 2022 Gold Jupiter winner (Pyrotex Fireworx, England).",
+      "note": "9 shows on Wednesdays and Saturdays, post-pandemic full return. Times assumed 22:00 (bridge closed 20:30-23:30 on show nights, consistent).",
+      "shows": [
+        {"date": "2022-06-25", "time": "22:00", "program": "Je Me Souviens (opening)", "pyro_firm": null},
+        {"date": "2022-07-02", "time": "22:00", "program": "Tribute to Prince", "pyro_firm": null},
+        {"date": "2022-07-09", "time": "22:00", "program": "Mexico", "pyro_firm": null},
+        {"date": "2022-07-13", "time": "22:00", "program": "Hungary", "pyro_firm": null},
+        {"date": "2022-07-16", "time": "22:00", "program": "Canada", "pyro_firm": null},
+        {"date": "2022-07-20", "time": "22:00", "program": "Italy", "pyro_firm": null},
+        {"date": "2022-07-27", "time": "22:00", "program": "Croatia", "pyro_firm": null},
+        {"date": "2022-08-03", "time": "22:00", "program": "England", "pyro_firm": "Pyrotex Fireworx"},
+        {"date": "2022-08-06", "time": "22:00", "program": "Tribute to Genesis (finale)", "pyro_firm": null}
+      ]
+    },
+    "2023": {
+      "confirmed": true,
+      "confidence": "high",
+      "edition": 37,
+      "source": "thebeat925.ca",
+      "note": "8 shows, mostly Thursdays with one Sunday (Jul 30). Verify the exact date list against an official/archived press release before treating results as final.",
+      "shows": [
+        {"date": "2023-06-29", "time": "22:00", "program": "Tribute to Boy & Girl Bands", "pyro_firm": null},
+        {"date": "2023-07-06", "time": "22:00", "program": "Ukraine", "pyro_firm": null},
+        {"date": "2023-07-13", "time": "22:00", "program": "Portugal", "pyro_firm": null},
+        {"date": "2023-07-20", "time": "22:00", "program": "Belgium", "pyro_firm": null},
+        {"date": "2023-07-27", "time": "22:00", "program": "Canada", "pyro_firm": null},
+        {"date": "2023-07-30", "time": "22:00", "program": "United States", "pyro_firm": null},
+        {"date": "2023-08-03", "time": "22:00", "program": "Finland", "pyro_firm": null},
+        {"date": "2023-08-10", "time": "22:00", "program": "Tribute to Metallica", "pyro_firm": null}
+      ]
+    },
+    "2024": {
+      "confirmed": true,
+      "confidence": "high",
+      "edition": 38,
+      "source": "propriobateau.ca 2024 edition listing (secondary source). Endpoints (Jun 27 - Aug 1) corroborated by multiple sources; Gold Jupiter 2024: France (Arteventia) per Wikipedia.",
+      "note": "8 shows on a mix of Thursdays, Sundays and Saturdays. Verify the mid-season dates against an official press release before treating results as final.",
+      "shows": [
+        {"date": "2024-06-27", "time": "22:00", "program": "Boy & Girl Bands Tribute", "pyro_firm": null},
+        {"date": "2024-07-04", "time": "22:00", "program": "Japan", "pyro_firm": null},
+        {"date": "2024-07-07", "time": "22:00", "program": "Italy", "pyro_firm": null},
+        {"date": "2024-07-11", "time": "22:00", "program": "Austria", "pyro_firm": null},
+        {"date": "2024-07-14", "time": "22:00", "program": "Mexico", "pyro_firm": null},
+        {"date": "2024-07-20", "time": "22:00", "program": "Canada", "pyro_firm": null},
+        {"date": "2024-07-27", "time": "22:00", "program": "France", "pyro_firm": "Arteventia"},
+        {"date": "2024-08-01", "time": "22:00", "program": "Coldplay Tribute", "pyro_firm": null}
+      ]
+    },
+    "2025": {
+      "confirmed": true,
+      "confidence": "high",
+      "edition": 39,
+      "source": "Official IFLQ 2025 country-reveal press release (sixflags.com/laronde).",
+      "note": "8 shows, all 22:00, six Thursdays + two Sundays.",
+      "shows": [
+        {"date": "2025-06-26", "time": "22:00", "program": "Viva Latino (opening)", "pyro_firm": "BEM Feux d'Artifice"},
+        {"date": "2025-07-03", "time": "22:00", "program": "Italy", "pyro_firm": "Pyro Italy"},
+        {"date": "2025-07-06", "time": "22:00", "program": "Japan", "pyro_firm": "Great Sky Art"},
+        {"date": "2025-07-10", "time": "22:00", "program": "Canada", "pyro_firm": "Blue Star"},
+        {"date": "2025-07-17", "time": "22:00", "program": "Switzerland", "pyro_firm": "Sugyp"},
+        {"date": "2025-07-24", "time": "22:00", "program": "United States", "pyro_firm": "Pyro Spectaculars"},
+        {"date": "2025-07-27", "time": "22:00", "program": "France", "pyro_firm": "Lux Factory"},
+        {"date": "2025-07-31", "time": "22:00", "program": "Finale / Taylor Swift tribute", "pyro_firm": "RozziPanzera"}
+      ]
+    },
+    "2026": {
+      "confirmed": true,
+      "confidence": "high",
+      "edition": 40,
+      "source": "sixflags.com/laronde programmation page (2026 schedule). Dates confirmed; programs/firms not yet sourced.",
+      "note": "8 dates, assumed 22:00 launches (verify). Programs unknown pending country reveal.",
+      "shows": [
+        {"date": "2026-07-02", "time": "22:00", "program": null, "pyro_firm": null},
+        {"date": "2026-07-09", "time": "22:00", "program": null, "pyro_firm": null},
+        {"date": "2026-07-12", "time": "22:00", "program": null, "pyro_firm": null},
+        {"date": "2026-07-16", "time": "22:00", "program": null, "pyro_firm": null},
+        {"date": "2026-07-23", "time": "22:00", "program": null, "pyro_firm": null},
+        {"date": "2026-07-26", "time": "22:00", "program": null, "pyro_firm": null},
+        {"date": "2026-07-30", "time": "22:00", "program": null, "pyro_firm": null},
+        {"date": "2026-08-06", "time": "22:00", "program": null, "pyro_firm": null}
+      ]
+    }
+  }
+}

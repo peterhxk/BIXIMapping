@@ -9,3 +9,5 @@ shapely
 requests
 Pillow
 ipython
+scikit-learn
+joblib
