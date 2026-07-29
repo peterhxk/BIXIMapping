@@ -25,7 +25,7 @@ import numpy as np
 import pandas as pd
 import joblib
 
-import bixi_anomaly_detection_ml.firework_features as ff
+import firework_features as ff
 
 
 def load_bundle(path):
@@ -97,7 +97,6 @@ def main(argv=None):
     X = pred[features].fillna(0.0)
     pred = pred.copy()
     pred["fireworks_proba"] = clf.predict_proba(X)[:, 1]
-    pred["z_flag"] = pred["robust_z"] > 3.0        # cheap unsupervised cross-check
     ranked = pred.sort_values("fireworks_proba", ascending=False)
 
     print(f"\n=== Predicted fireworks nights for {pred_year} (proba >= {threshold:.2f}) ===")
@@ -106,10 +105,10 @@ def main(argv=None):
         print("  (none above threshold)")
     for night, row in called.iterrows():
         print(f"  {night.date()}  {night.day_name():9s}  p={row['fireworks_proba']:.2f}  "
-              f"z={row['robust_z']:+.1f}  escape_rides={int(row['escape_rides'])}")
+              f"escape_netout={int(row['escape_netout'])}  escape_rides={int(row['escape_rides'])}")
 
     print(f"\n=== Top {args.top_n} nights by probability ===")
-    cols = ["fireworks_proba", "robust_z", "escape_rides", "escape_netout", "z_flag"]
+    cols = ["fireworks_proba", "escape_rides", "escape_netout", "escape_share", "netout_share"]
     view = ranked.head(args.top_n)[cols].copy()
     view.index = [f"{d.date()} {d.day_name()[:3]}" for d in view.index]
     print(view.to_string(float_format=lambda v: f"{v:.2f}"))
@@ -134,7 +133,7 @@ def main(argv=None):
               f"(TP={tp} FP={fp} FN={fn}, {int(truth.sum())} real shows)")
 
     if args.out:
-        out_cols = ["fireworks_proba", "robust_z", "z_flag", "escape_rides", "escape_netout",
+        out_cols = ["fireworks_proba", "escape_rides", "escape_netout",
                     "escape_share", "netout_share", "pre_arrival_share", "dow"]
         ranked[out_cols].to_csv(args.out)
         print(f"\nWrote ranked table -> {args.out}")

@@ -1,64 +1,101 @@
-# BIXI Montreal — Network Flow & Routing Analysis
+# BIXI Montreal: Network Flow, Routing, and Anomaly Detection
 
-Routing Montreal's real 2025–2026 [BIXI](https://donnees.montreal.ca/en/dataset/bixi-historique-des-deplacements?) bike-share trips over the actual
-street network to estimate **riders' traffic flow**, along with sources and destinations. Every trip is a
-station-to-station record; this project turns tens of thousands of unique origin–destination pairs
-into shortest paths across the Montreal bike + walk graph, which accumulates the load on every street
-segment, and breaks it down by hour, by day, and by station.
+Routing Montreal's real 2022 to 2026 [BIXI](https://donnees.montreal.ca/en/dataset/bixi-historique-des-deplacements?)
+bike share trips over the actual street network to estimate where riders' traffic flows, plus the
+sources and sinks that flow creates. Every trip is a station to station record. This project turns
+tens of thousands of unique origin destination pairs into shortest paths across the Montreal bike
+plus walk graph, accumulates the load on every street segment, and breaks it down by hour, by day,
+and by station.
 
-![Montreal edge-load heatmap](output/montreal_heatmap.png)
+Alongside the mapping, the repo benchmarks the routing algorithms that make it tractable (Dijkstra
+vs A\* vs ALT) and includes two demand anomaly studies: Parc Jean-Drapeau island events, and a
+machine learning model that detects and predicts La Ronde fireworks nights from the post show BIXI
+exodus.
 
-Alongside the mapping work, the repo benchmarks the routing algorithms that make it tractable
-(Dijkstra vs A\* vs ALT) and includes a demand-anomaly study of Parc Jean-Drapeau island events.
+![Montreal edge load flow heatmap](bixi_visualization/output/montreal_heatmap.png)
+
+## Repo layout
+
+The work is split into three self contained folders, plus shared `output/` (figures and results)
+and `cache/` (regenerable graph and load pickles).
+
+| Folder | What it covers |
+|---|---|
+| [`bixi_visualization/`](bixi_visualization/) | The main flow pipeline and maps. |
+| [`bixi_algorithm_benchmark/`](bixi_algorithm_benchmark/) | Dijkstra vs A\* vs ALT on the real workload. |
+| [`bixi_anomaly_detection_ml/`](bixi_anomaly_detection_ml/) | Jean-Drapeau event anomalies and the La Ronde fireworks predictor (has its own [README](bixi_anomaly_detection_ml/README.md)). |
 
 ## What's here
 
+### `bixi_visualization/`
+
 | Notebook | What it does |
 |---|---|
-| **`bixi_montreal.ipynb`** | The main pipeline. Loads BIXI stations and trips, builds the composed bike+walk street graph with OSMnx, routes every unique OD pair with **ALT**, and accumulates per-edge / per-hour load. Produces the Montreal-wide heatmap, the 24-panel hourly grid, the animated GIF, the day×hour ridership heatmap, the station net-flow (source/sink) map, and the weekday-vs-weekend pattern. |
-| **`algorithm_benchmark.ipynb`** | Benchmarks **Dijkstra vs A\* vs ALT** on the real BIXI workload — OD pairs sampled from the 2025 trip table, weighted by trip frequency. Measures correctness, heuristic admissibility, query time, search space (edges relaxed), preprocessing cost, and how speedup scales with trip distance and landmark count. |
-| **`jean_drapeau_anomaly.ipynb`** | Anomaly detection on Parc Jean-Drapeau island demand: does anomalous ridership line up with known island events (F1 Grand Prix, Osheaga, ÎleSoniq, Piknic Électronik)? Baselines demand per (month, day-of-week), robust MAD z-scores the residual, and controls for weather via the Open-Meteo archive. |
-| **`shortest_path_testing.ipynb`** | Scratch/validation notebook — strongly-connected-component checks and the bike+walk graph construction the pipeline relies on (notably keeping the Jacques-Cartier bridge path, which a bike-only graph drops). |
-| **`network.ipynb`** | Early OSMnx exploration — downloading the road network and locating rental stations within a bounding box. |
-| **`bixi_south_shore.ipynb`** | Earlier South Shore (Longueuil / Brossard) heatmap, the precursor to the Montreal-wide pipeline. |
+| **`bixi_montreal.ipynb`** | The main pipeline. Loads BIXI stations and trips, builds the composed bike plus walk street graph with OSMnx, routes every unique OD pair with ALT, and accumulates per edge and per hour load. Produces the Montreal wide flow maps, the 24 panel hourly grid, the day by hour ridership heatmap, the station net flow (source and sink) map, the weekday vs weekend pattern, and animated flow fields where each dot's speed tracks that segment's ridership. |
+| **`bixi_south_shore.ipynb`** | Earlier South Shore (Longueuil and Brossard) heatmap, the precursor to the Montreal wide pipeline. |
+
+### `bixi_algorithm_benchmark/`
+
+| Notebook | What it does |
+|---|---|
+| **`algorithm_benchmark.ipynb`** | Benchmarks Dijkstra vs A\* vs ALT on the real BIXI workload, with OD pairs sampled from the trip table and weighted by trip frequency. Measures correctness, heuristic admissibility, query time, search space (edges relaxed), preprocessing cost, and how the speedup scales with trip distance and landmark count. Includes a break even analysis: ALT's landmark preprocessing pays for itself after about 1,200 queries against Dijkstra, and the full pipeline issues over 537,000. |
+| **`shortest_path_testing.ipynb`** | Scratch and validation notebook. Strongly connected component checks and the bike plus walk graph construction the pipeline relies on, notably keeping the Jacques-Cartier bridge path that a bike only graph drops. |
+
+### `bixi_anomaly_detection_ml/`
+
+| File | What it does |
+|---|---|
+| **`firework_anomaly_train.ipynb`** | Trains a classifier on four seasons (2022 to 2025) to detect La Ronde fireworks nights from the riverfront BIXI exodus, evaluated leave one year out. Exports the fitted model to `output/firework_model.joblib`. |
+| **`predict_fireworks.py`** | Inference only CLI. Loads the saved model, runs the shared preprocessing on a new season's CSV, and ranks the nights most likely to have hosted a show. |
+| **`firework_features.py`**, **`fireworks_dates.json`** | Shared feature engineering (imported by both the notebook and the CLI so they never drift), and the ground truth IFLQ fireworks calendars. |
+| **`jean_drapeau_anomaly/jean_drapeau_anomaly.ipynb`** | Anomaly detection on Parc Jean-Drapeau island demand: does anomalous ridership line up with known island events (F1 Grand Prix, Osheaga, ÎleSoniq, Piknic Électronik)? Baselines demand per (month, day of week), robust MAD z scores the residual, and controls for weather. |
+
+See the [folder README](bixi_anomaly_detection_ml/README.md) for the fireworks pipeline in detail.
 
 ## Key results
 
-### Routing algorithm: ALT wins on the real workload
-Because the same OD pairs are reused across ~24 hourly snapshots, the up-front cost of ALT's
-landmark preprocessing amortizes over many queries — exactly the regime it's designed for. A\* and
-ALT both return provably optimal paths (verified against Dijkstra), so route *lengths* are
-identical; ALT just relaxes far fewer edges per query.
+### Routing: ALT wins on the real workload
+Because the same OD pairs are reused across roughly 24 hourly snapshots, the up front cost of ALT's
+landmark preprocessing amortizes over many queries, exactly the regime it is built for. A\* and ALT
+both return provably optimal paths (verified against Dijkstra), so route lengths are identical. ALT
+just relaxes far fewer edges per query.
 
-![Benchmark: query time vs edges relaxed](output/benchmark_time_vs_edges.png)
-![Benchmark: speedup by trip distance](output/benchmark_speedup_by_distance.png)
+![Benchmark: query time vs edges relaxed](bixi_algorithm_benchmark/output/benchmark_time_vs_edges.png)
+![Benchmark: speedup by trip distance](bixi_algorithm_benchmark/output/benchmark_speedup_by_distance.png)
 
 ### Diurnal flow
 Corridors light up for the morning commute, shift downtown, and reverse in the evening. Weekdays
-show a commute-driven double peak (8am / 5pm); weekends show a broader midday peak.
+show a commute driven double peak (8am and 5pm); weekends show a broader midday peak.
 
-![Weekday vs weekend hourly pattern](output/montreal_weekday_weekend.png)
+![Weekday vs weekend hourly pattern](bixi_visualization/output/montreal_weekday_weekend.png)
+![Animated hourly flow](bixi_visualization/output/montreal_hourly_animated.gif)
 
-### Station net-flow (rebalancing signal)
-Arrivals minus departures per station: which stations are net *sinks* (fill up, need bikes
-removed) versus net *sources* (drain out, need bikes added).
+### Station net flow
+Arrivals minus departures per station: which stations are net sinks (fill up, need bikes removed)
+versus net sources (drain out, need bikes added).
 
-![Station net-flow map](output/montreal_station_netflow.png)
+![Station net flow map](bixi_visualization/output/montreal_station_netflow.png)
 
-### Jean-Drapeau event anomalies
-![Jean-Drapeau demand vs events](output/jean_drapeau_hourly_events.png)
+### Fireworks detection
+The riverfront exodus after the 22:00 show is a clean signal. In the hour by hour profile, fireworks
+nights spike after launch in a way ordinary evenings on the same weekday do not.
 
-All rendered figures land in [`output/`](output/).
+![Fireworks vs typical evening demand](bixi_anomaly_detection_ml/output/firework_hourly_profile.png)
+
+Figures live in each folder's `output/`. The fireworks and Jean-Drapeau figures are still in the
+shared root [`output/`](output/), since `bixi_anomaly_detection_ml/output/` has none moved over yet.
 
 ## Setup
 
 ```bash
 python3 -m venv venv
 source venv/bin/activate
-pip install -r requirements.txt     
+pip install -r requirements.txt
 ```
 
-Then open any notebook with Jupyter and run top to bottom.
+Open the notebooks from the repo root as your workspace, then run each one top to bottom. The
+notebooks and scripts use relative paths (`output/`, `cache/`), so keeping the working directory at
+the repo root is what makes them resolve.
 
 ### Data
 
@@ -66,21 +103,26 @@ The notebooks read BIXI open data from an external drive:
 
 ```
 station_information.json                                  # station metadata (GBFS)
-DonneesOuvertes2025_010203040506070809101112.csv          # 2025 trips (full season)
-DonneesOuvertes2026_01020304.csv                          # 2026 trips (Jan–Apr)
+DonneesOuverte2022.csv                                    # 2022 trips
+DonneesOuvertes2023_12.csv                                # 2023 trips
+DonneesOuvertes2024_010203040506070809101112.csv         # 2024 trips
+DonneesOuvertes2025_010203040506070809101112.csv         # 2025 trips (full season)
+DonneesOuvertes2026_01020304.csv                          # 2026 trips (Jan to Apr)
 ```
 
-Paths are set at the top of each notebook (`DATA_PATH`, `CSV_2025`, `CSV_2026`) and currently point at `/Volumes/Extreme SSD/SUMO Data/`; edit them to match where you keep the data. Trip CSVs come from [Montreal's BIXI open data](https://donnees.montreal.ca/en/dataset/bixi-historique-des-deplacements?); weather is fetched from the free [Open-Meteo historical archive API](https://open-meteo.com/en/docs/historical-weather-api).
+Paths are set at the top of each notebook and currently point at `/Volumes/Extreme SSD/SUMO Data/`.
+Edit them to match where you keep the data. Trip CSVs come from
+[Montreal's BIXI open data](https://donnees.montreal.ca/en/dataset/bixi-historique-des-deplacements?);
+weather is fetched from the free [Open-Meteo historical archive API](https://open-meteo.com/en/docs/historical-weather-api).
 
-OSMnx graph downloads and the composed bike+walk graph are cached under `cache/` (gitignored), so the slow graph-build steps run only once.
+OSMnx graph downloads and the composed bike plus walk graph are cached under `cache/` (gitignored),
+so the slow graph build steps run only once.
 
 ## Notes
 
-- Routes on a **composed bike + walk graph** (`nx.compose`), because cyclists share key links,
-  notably the Jacques-Cartier bridge bike lane, with pedestrians, and a bike-only network silently drops
-  them.
+- Routes on a composed bike plus walk graph (`nx.compose`), because cyclists share key links (notably
+  the Jacques-Cartier bridge bike lane) with pedestrians, and a bike only network silently drops them.
 - The benchmark restricts to the largest strongly connected component, so every sampled query is
-  guaranteed routable; the production pipeline routes the full composed graph and skips
-  `NetworkXNoPath` pairs.
-- `montreal_edge_loads.pkl` is the cached per-edge / per-hour load; the visualization cells can be
-  re-run from it without recomputing all paths.
+  routable. The production pipeline routes the full composed graph and skips unreachable pairs.
+- `cache/montreal_edge_loads.pkl` is the cached per edge and per hour load. The visualization cells
+  re-run from it without recomputing all the paths.

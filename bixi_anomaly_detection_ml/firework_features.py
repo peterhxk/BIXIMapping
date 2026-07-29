@@ -1,8 +1,7 @@
 """Shared feature engineering for La Ronde fireworks detection.
 
 Imported by BOTH firework_anomaly_train.ipynb (training) and predict_fireworks.py
-(serving) so the preprocessing can never drift between train and predict time --
-the classic source of "great in the notebook, broken in production" bugs.
+(serving) so the preprocessing can never drift between train and predict time.
 
 Design choices that make the pipeline cross-year portable:
   * Viewshed is matched on each trip's OWN station coordinates (inline in the CSV),
@@ -10,8 +9,6 @@ Design choices that make the pipeline cross-year portable:
     changes year to year; a coordinate box is the same physical place every season.
   * Features are per-year-normalised or within-night ratios (never raw counts), so a
     model trained on 2022-2025 transfers despite ridership growth.
-  * The robust z-score baseline is computed over EVERY night (labels not needed), so
-    it is defined identically at train and predict time.
 """
 from __future__ import annotations
 
@@ -39,8 +36,9 @@ TRIP_COLS = ["STARTTIMEMS",
              "STARTSTATIONLATITUDE", "STARTSTATIONLONGITUDE",
              "ENDSTATIONLATITUDE", "ENDSTATIONLONGITUDE"]
 
-# Portable feature set (ratios / per-year-normalised / weather -- never raw counts).
-BASE_FEATURES = ["robust_z", "escape_share", "netout_share", "pre_arrival_share", "dow"]
+# Portable feature set (within-night shares / weather -- never raw counts, so the model
+# transfers across years despite ridership growth).
+BASE_FEATURES = ["escape_share", "netout_share", "pre_arrival_share", "dow"]
 WEATHER_FEATURES = ["temp_max", "precip_mm"]
 
 FIREWORKS_HOUR = 22   # every show launches at 22:00 local
@@ -108,23 +106,6 @@ def nightly_frame(trips, months=(6, 7, 8)):
     return n
 
 
-def add_robust_z(n):
-    """Per-(month, weekday) robust z-score of escape-window volume.
-
-    Computed over every night (events included) so it is label-free and therefore
-    identical at train and predict time. A handful of event nights barely move a
-    per-bucket median. NaN (singleton buckets / zero MAD) -> 0.
-    """
-    n = n.copy()
-    grp = n.groupby(["month", "dow"])["escape_rides"]
-    expected = grp.transform("median")
-    mad = grp.transform(lambda x: (x - x.median()).abs().median())
-    n["expected"] = expected
-    n["robust_z"] = (n["escape_rides"] - expected) / (1.4826 * mad.replace(0, np.nan))
-    n["robust_z"] = n["robust_z"].fillna(0.0)
-    return n
-
-
 def season_year(n):
     return int(n.index.year.value_counts().idxmax())
 
@@ -155,7 +136,7 @@ def build_features(csv_path, use_weather=True, cache_dir="output", months=(6, 7,
     trips = load_zone_trips(csv_path)
     if trips.empty:
         return None, False
-    n = add_robust_z(nightly_frame(trips, months=months))
+    n = nightly_frame(trips, months=months)
     if n.empty:
         return None, False
     weather_ok = False
